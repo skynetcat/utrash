@@ -18,18 +18,25 @@ printHelp () {
       Empty the trash.
 
     -r, --restore
-      Select file(s) to restore to the original path.
+      Restore item(s) to their original path.
+
+    -rh, --restore-here
+      Restore item(s) trashed from here to their
+      original path.
     
     -rt, --restore-today
-      Select file(s) deleted today to restore to 
-      the original path.
+      Restore item(s) trashed today to their 
+      original path.
 
     -ry, --restore-yesterday
-      Select file(s) deleted yesterday to restore to 
-      the original path.
+      Restore item(s) trashed yesterday to their 
+      original path.
 
     -l, --list
-      List trash items.
+      List trashed items.
+
+    -lh, --list-here
+      List items trashed from here
 
     -lt, --list-today
       List items trashed today.
@@ -39,7 +46,7 @@ printHelp () {
 
     -c, --custom
       Used in combination with restore options to
-      restore in a custom directory
+      restore in a custom directory.
 
   Examples:
     1. utrash hello
@@ -88,6 +95,12 @@ empty () {
   fi
 }
 
+absolutePath () {
+  targetName="$1"
+  dirName="`dirname "$2"`"
+  echo "`cd "$dirName"; pwd`/$targetName"
+}
+
 # =========================================
 # OPTIONS
 # =========================================
@@ -95,9 +108,29 @@ case "$1" in
   "-h"|"--help") printHelp ;;
   "-e"|"--empty") empty ;;
   "-r"|"--restore") ;;
+  "-rh"|"--restore-here") ;;
   "-rt"|"--restore-today") ;;
   "-ry"|"--restore-yesterday") ;;
   "-l"|"--list") ;;
+  "-lh"|"--list-here") ;;
   "-lt"|"--list-today") ;;
   "-ly"|"--list-yesterday") ;;
+  *)
+    if [[ "$#" -gt "0" ]]; then
+      checkDir "$TRASH_DIR/$today"
+      for target in "${@}"; do
+        if [[ -f "$target" ]] || [[ -d "$target" ]]; then
+          targetName="`basename "$target"`"
+          path="`absolutePath "$targetName" "$target"`"
+          echo "$today/$targetName;;;$path" >> $TRASH_DIR/record
+          mv "$path" "$TRASH_DIR/$today"
+          echo "Trashed '$targetName'"
+        else
+          echo "Could not trash '$targetName' no such file or directory"
+        fi
+      done
+    else
+      echo "Please, specify an item to trash."
+    fi
+    ;;
 esac
