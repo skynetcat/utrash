@@ -1,14 +1,14 @@
 # Installation steps
-## Installing required dependencies
-### Termux
+## 1. Installing required dependencies
+### 1.1 Termux
 ```bash
 pkg install git fzf
 ```
-## Cloning the repository
+## 2. Cloning the repository
 ```bash
 git clone https://github.com/skynetcat/utrash.git
 ```
-## Giving executable permission
+## 3. Giving executable permission
 ```bash
 chmod +x utrash
 ```
