@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+# =========================================
+# HELP
+# =========================================
+printHelp () {
+  cat <<HELPPAGE
+  Description:
+    A simple trash script written in bash.
+
+  Usage: utrash [OPTION]/[FILE(S)]
+
+  Options:
+    -h, --help
+      Print this help page.
+
+    -r, --restore
+      Select file(s) to restore to the original path.
+    
+    -rt, --restore-today
+      Select file(s) deleted today to restore to 
+      the original path.
+
+    -ry, --restore-yesterday
+      Select file(s) deleted yesterday to restore to 
+      the original path.
+
+  Examples:
+    1. utrash hello
+        Trashes 'hello' file
+
+    2. utrash file1 file2 dir1
+        Trashes file1, file2 and dir1
+
+    3. utrash *
+        Trashes all files in the current directory
+
+    4. utrash -r 
+        Select file(s) to recover using fzf
+HELPPAGE
+}
+
+# =========================================
+# VARIABLES
+# =========================================
+today="`date "+%d-%m-%Y"`"
+yesterday="`date -d "-1 day" "+%d-%m-%Y"`"
+
+# =========================================
+# DIRECTORIES
+# =========================================
+TRASH_DIR="$HOME/.local/share/utrash"
+
+checkDir () {
+  if [[ ! -d "$1" ]]; then
+    mkdir -p "$1"
+  fi
+}
+
+checkDir "$TRASH_DIR"
+
+# =========================================
+# OPTIONS
+# =========================================
+case "$1" in
+  "-h"|"--help") printHelp ;;
+  "-r"|"--restore") ;;
+  "-rt"|"--restore-today") ;;
+  "-ry"|"--restore-yesterday") ;;
+esac
