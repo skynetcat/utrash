@@ -126,7 +126,7 @@ case "$1" in
           mv "$path" "$TRASH_DIR/$today"
           echo "Trashed '$targetName'"
         else
-          echo "Could not trash '$targetName' no such file or directory"
+          echo "Could not trash '$target' no such file or directory"
         fi
       done
     else
