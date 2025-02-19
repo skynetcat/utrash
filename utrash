@@ -8,45 +8,43 @@ printHelp () {
   Description:
     A simple trash script written in bash.
 
-  Usage: utrash [OPTION]/[FILE(S)]
+  Usage: utrash [ACTION] [SCOPE] [DATE] [EXTRA]
+         utrash [FILE(S)]
 
-  Options:
+  Action:
     -h, --help
       Print this help page.
 
     -e, --empty
       Empty the trash.
 
-    -r, --restore
-      Restore item(s) to their original path.
-
-    -rh, --restore-here
-      Restore item(s) trashed from here to their
-      original path.
-    
-    -rt, --restore-today
-      Restore item(s) trashed today to their 
-      original path.
-
-    -ry, --restore-yesterday
-      Restore item(s) trashed yesterday to their 
-      original path.
-
-    -c, --custom
-      Used in combination with restore options to
-      restore in a custom directory.
-
     -l, --list
       List trashed items.
 
-    -lh, --list-here
-      List items trashed from here.
+    -r, --restore
+      Restore item(s) to their original path.
 
-    -lt, --list-today
-      List items trashed today.
+  Scope:
+    -d, --here
+      Operate on this directory recursively
 
-    -ly, --list-yesterday
-      List items trashed yesterday.
+    -D, --here-only
+      Operate on this directory only (non recursive)
+
+  Date:
+    -t, --today
+    -p, --yesterday
+    -w, --week
+    -m, --month
+    -y, --year
+
+  Extra:
+    -c, --custom
+      use a custom restore directory instead of
+      original directory.
+
+    --fzf
+      use fzf
 
   Examples:
     1. utrash hello
@@ -63,12 +61,6 @@ printHelp () {
         Select item(s) to recover using fzf.
 HELPPAGE
 }
-
-# =========================================
-# VARIABLES
-# =========================================
-today="`date "+%d-%m-%Y"`"
-yesterday="`date -d "-1 day" "+%d-%m-%Y"`"
 
 # =========================================
 # DIRECTORIES
@@ -118,78 +110,145 @@ fzfCmd () {
 }
 
 # =========================================
-# OPTIONS
+# PROCESS ARGUMENTS
 # =========================================
-case "$1" in
-  "-h"|"--help") printHelp ;;
 
-  "-e"|"--empty") empty ;;
+# Check help option and print help page then exit.
+checkHelp="`echo "$@" | grep -- "-h\|--help"`"
+if [ -n "$checkHelp" ]; then
+  printHelp
+  exit
+fi
 
-  "-r"|"--restore") ;;
-  "-rh"|"--restore-here") ;;
-  "-rt"|"--restore-today") ;;
-  "-ry"|"--restore-yesterday") ;;
+while [[ $# > 0 ]]; do
+  case "$1" in
+    "-e"|"--empty")
+      empty
+      exit
+      ;;
 
-  "-l"|"--list")
-    if [[ -f "$TRASH_DIR/record" ]] || ! grep -q "[^[:space:]]" "$TRASH_DIR/record"; then
-     
-      cat "$TRASH_DIR/record" |\
-        awk -F ";;;" '{print $1}' |\
-        fzfCmd
-    else
-      echo "There is nothing in the trash."
-    fi
-    ;;
+    "-r"|"--restore") 
+      action="restore" 
+      shift
+      ;;
 
-  "-lh"|"--list-here")
-    if grep -q ";;;`pwd`" "$TRASH_DIR/record"; then
-      cat "$TRASH_DIR/record" |\
-        grep --color=never ";;;`pwd`" |\
-        awk -F ";;;" '{print $1}' |\
-        fzfCmd
-    else
-      echo "Nothing was trashed from here."
-    fi
-    ;;
+    "-l"|"--list") 
+      action="list" 
+      shift
+      ;;
 
-  "-lt"|"--list-today")
-    if grep -q "^$today/" "$TRASH_DIR/record"; then
-      cat "$TRASH_DIR/record" |\
-        grep --color=never "^$today/" |\
-        awk -F ";;;" '{print $1}' |\
-        fzfCmd
-    else
-      echo "Nothing was trashed today."
-    fi
-    ;;
+    "-d"|"--here") 
+      scope="`pwd`"
+      shift
+      ;;
 
-  "-ly"|"--list-yesterday")
-    if grep -q "^$yesterday" "$TRASH_DIR/record"; then
-      cat "$TRASH_DIR/record" |\
-        grep --color=never "^$yesterday/" |\
-        awk -F ";;;" '{print $1}' |\
-        fzfCmd
-    else
-      echo "Nothing was trashed yesterday."
-    fi
-    ;;
+    "-D"|"--here-only")
+      scope="`pwd`"
+      recurse=1
+      shift
+      ;;
 
-  *)
-    if [[ "$#" -gt "0" ]]; then
-      checkDir "$TRASH_DIR/$today"
-      for target in "${@}"; do
-        if [[ -f "$target" ]] || [[ -d "$target" ]]; then
-          targetName="`basename "$target"`"
-          path="`absolutePath "$targetName" "$target"`"
-          echo "$today/$targetName;;;$path" >> $TRASH_DIR/record
-          mv "$path" "$TRASH_DIR/$today"
-          echo "Trashed '$targetName'"
-        else
-          echo "Could not trash '$target' no such file or directory."
-        fi
-      done
-    else
-      echo "Please, specify an item to trash."
-    fi
-    ;;
-esac
+    "-t"|"--today") 
+      date="`date "+%d-%m-%Y"`"
+      shift
+      ;;
+
+    "-p"|"--yesterday")
+      date="`date -d "-1 day" "+%d-%m-%Y"`"
+      shift
+      ;;
+    
+    "-w"|"--week")
+      date="`date -d "-1 week" "+%d-%m-%Y"`"
+      shift
+      ;;
+    
+    "-m"|"--month")
+      date="`date -d "-1 month" "+%d-%m-%Y"`"
+      shift
+      ;;
+
+    "-y"|"--year")
+      date="`date -d "-1 year" "+%d-%m-%Y"`"
+      shift
+      ;;
+
+    "--fzf")
+      useFzf=1
+      shift
+      ;;
+
+    "-c"|"--custom")
+      read -rp "Custom directory: " customDir
+      shift
+      ;;
+
+    *)
+      if [[ "$#" -gt "0" ]]; then
+        checkDir "$TRASH_DIR/$today"
+        for target in "${@}"; do
+          if [[ -f "$target" ]] || [[ -d "$target" ]]; then
+            targetName="`basename "$target"`"
+            path="`absolutePath "$targetName" "$target"`"
+            echo "$today/$targetName;;;$path" >> $TRASH_DIR/record
+            mv "$path" "$TRASH_DIR/$today"
+            echo "Trashed '$targetName'"
+          else
+            echo "Could not trash '$target' no such file or directory."
+          fi
+        done
+      else
+        echo "Please, specify an item to trash."
+      fi
+      exit
+      ;;
+  esac
+done
+  
+#  case "$1" in
+#
+#    "-l"|"--list")
+#      if [[ -f "$TRASH_DIR/record" ]] || ! grep -q "[^[:space:]]" "$TRASH_DIR/record"; then
+#
+#        cat "$TRASH_DIR/record" |\
+#          awk -F ";;;" '{print $1}' |\
+#          fzfCmd
+#                else
+#                  echo "There is nothing in the trash."
+#      fi
+#      ;;
+#
+#    "-lh"|"--list-here")
+#      if grep -q ";;;`pwd`" "$TRASH_DIR/record"; then
+#        cat "$TRASH_DIR/record" |\
+#          grep --color=never ";;;`pwd`" |\
+#          awk -F ";;;" '{print $1}' |\
+#          fzfCmd
+#                else
+#                  echo "Nothing was trashed from here."
+#      fi
+#      ;;
+#
+#    "-lt"|"--list-today")
+#      if grep -q "^$today/" "$TRASH_DIR/record"; then
+#        cat "$TRASH_DIR/record" |\
+#          grep --color=never "^$today/" |\
+#          awk -F ";;;" '{print $1}' |\
+#          fzfCmd
+#                else
+#                  echo "Nothing was trashed today."
+#      fi
+#      ;;
+#
+#    "-ly"|"--list-yesterday")
+#      if grep -q "^$yesterday" "$TRASH_DIR/record"; then
+#        cat "$TRASH_DIR/record" |\
+#          grep --color=never "^$yesterday/" |\
+#          awk -F ";;;" '{print $1}' |\
+#          fzfCmd
+#                else
+#                  echo "Nothing was trashed yesterday."
+#      fi
+#      ;;
+#
+#  esac
