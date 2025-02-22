@@ -132,11 +132,13 @@ case "$1" in
 "-l"|"--list") 
   action="list" 
   ;;
+
 -*)
   echo "ERR: Invalid action"
   printHelp
   exit
   ;;
+
 *)
   if [[ "$#" -gt "0" ]]; then
     checkDir "$TRASH_DIR/$today"
@@ -208,7 +210,7 @@ done
 
 case "$action" in
   "list")
-    if [[ -f "$TRASH_DIR/record" ]] || ! grep -q "[^[:space:]]" "$TRASH_DIR/record"; then
+    if [[ -f "$TRASH_DIR/record" ]]; then
       if [[ -n "$date" ]] && [[ -n "$scope" ]]; then
         if grep -q "^$date/" "$TRASH_DIR/record"; then
           if grep -q ":::`pwd`" "$TRASH_DIR/record"; then
