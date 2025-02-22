@@ -42,8 +42,8 @@ printHelp () {
       use a custom restore directory instead of
       original directory.
 
-    --fzf
-      use fzf
+    -nf, --no-fzf
+      Print instead of using fzf.
 
   Examples:
     1. utrash hello
@@ -194,8 +194,8 @@ while [[ $# > 0 ]]; do
       shift
       ;;
 
-    "--fzf")
-      useFzf=1
+    "-nf"|"--no-fzf")
+      noFzf=1
       shift
       ;;
 
