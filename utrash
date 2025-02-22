@@ -34,7 +34,6 @@ printHelp () {
   Date:
     -t, --today
     -p, --yesterday
-    -w, --week
     -m, --month
     -y, --year
 
@@ -182,11 +181,6 @@ while [[ $# > 0 ]]; do
 
     "-p"|"--yesterday")
       date="`date -d "-1 day" "+%d-%m-%Y"`"
-      shift
-      ;;
-    
-    "-w"|"--week")
-      date="`date -d "-1 week" "+%d-%m-%Y"`"
       shift
       ;;
     
