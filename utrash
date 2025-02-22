@@ -68,12 +68,6 @@ printHelp () {
 HELPPAGE
 }
 
-# Check help option and print help page then exit.
-if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ "${@: -1}" == "-h" ]] || [[ "${@: -1}" == "--help" ]]; then
-  printHelp
-  exit
-fi
-
 # =========================================
 # DIRECTORIES
 # =========================================
@@ -126,7 +120,17 @@ fzfCmd () {
 # PROCESS ARGUMENTS
 # =========================================
 
+# Check if help option is the last and print help page then exit.
+if [[ "${@: -1}" == "-h" ]] || [[ "${@: -1}" == "--help" ]]; then
+  printHelp
+  exit
+fi
+
 case "$1" in
+  "-h"|"--help")
+    printHelp
+    exit
+    ;;
 "-e"|"--empty")
   empty
   exit
@@ -172,6 +176,11 @@ shift
 
 while [[ $# > 0 ]]; do
   case "$1" in
+    "-h"|"--help")
+      printHelp
+      exit
+      ;;
+
     "-d"|"--here") 
       scope="`pwd`"
       recurse=1
