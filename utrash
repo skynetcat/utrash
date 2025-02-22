@@ -26,20 +26,27 @@ printHelp () {
 
   Scope:
     -d, --here
-      Operate on this directory recursively
+      Operate on this directory recursively.
 
     -D, --here-only
-      Operate on this directory only (non recursive)
+      Operate on this directory only (non recursive).
 
   Date:
     -t, --today
+      Items trashed today.
+
     -p, --yesterday
+      Items trashed yesterday.
+
     -m, --month
+      Items trashed this month.
+
     -y, --year
+      Items trashed this year.
 
   Extra:
     -c, --custom
-      use a custom restore directory instead of
+      Use a custom restore directory instead of
       original directory.
 
     -nf, --no-fzf
