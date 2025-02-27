@@ -49,9 +49,6 @@ printHelp () {
       Use a custom restore directory instead of
       original directory.
 
-    -nf, --no-fzf
-      Print instead of using fzf.
-
   Examples:
     1. utrash hello
         Trashes 'hello' file.
@@ -114,6 +111,40 @@ fzfCmd () {
     --tac \
     --bind="$allFzfBinds" \
     --header="[tab:toggleUp, S-tab:toggleDown, C-a:toggleAll]"
+}
+
+restore () {
+  if [[ -n "$1" ]]; then
+    cmd="find $TRASHCAN/$1 -maxdepth 1"
+  else
+    cmd="find $TRASHCAN/ -maxdepth 2"
+  fi
+
+  choice="`$cmd |\
+    sed "/.trash$/d; /[0-9]\{2\}-[0-9]\{2\}-[0-9]\{4\}$/d; /logfile$/d; s|$TRASHCAN/||g" |\
+    fzf --tac`"
+
+  if [[ -z "$choice" ]]; then
+    exit
+  fi
+
+  time="`echo "$choice" |\
+    awk -F '/' '{print $1}'`"
+
+  targetname="`echo "$choice" |\
+    awk -F '/' '{print $2}'`"
+
+  line="`grep --no-ignore-case \
+    "$targetname;;;" "$TRASHCAN/$time/logfile"`"
+
+  original_path="`echo "$line" |\
+    awk -F ';;;' '{print $2}'`"
+
+  mv "$TRASHCAN/$choice" "$original_path"
+
+  sed -i "s|$targetname;;;$original_path||g; /^$/d" "$TRASHCAN/$time/logfile"
+
+  echo "Moved '$targetname' back to '$original_path'"
 }
 
 # =========================================
@@ -212,11 +243,6 @@ while [[ $# > 0 ]]; do
       shift
       ;;
 
-    "-nf"|"--no-fzf")
-      noFzf=1
-      shift
-      ;;
-
     "-c"|"--custom")
       read -rp "Custom directory: " customDir
       shift
@@ -231,14 +257,12 @@ case "$action" in
         if grep -q "^$date/" "$TRASH_DIR/record"; then
           if grep -q ":::`pwd`" "$TRASH_DIR/record"; then
             if [[ $recurse == 1 ]]; then
-              cat "$TRASH_DIR/record" |\
-                grep "^$date/" |\
+              grep "^$date/" "$TRASH_DIR/record" |\
                 grep ":::`pwd`" |\
                 awk -F ":::" '{print $1}' |\
                 fzfCmd
             else
-              cat "$TRASH_DIR/record" |\
-                grep "^$date/" |\
+              grep "^$date/" "$TRASH_DIR/record" |\
                 grep ":::`pwd`/[a-zA-Z0-9]*$" |\
                 awk -F ":::" '{print $1}' |\
                 fzfCmd
