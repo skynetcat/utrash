@@ -275,8 +275,7 @@ case "$action" in
         fi
       elif [[ -n "$date" ]] && [[ -z "$scope" ]]; then
         if grep -q "^$date/" "$TRASH_DIR/record"; then
-          cat "$TRASH_DIR/record" |\
-            grep "^$date/" |\
+          grep "^$date/" "$TRASH_DIR/record" |\
             awk -F ":::" '{print $1}' |\
             fzfCmd
         else
@@ -285,13 +284,11 @@ case "$action" in
       elif [[ -z "$date" ]] && [[ -n "$scope" ]]; then
         if grep -q ":::`pwd`" "$TRASH_DIR/record"; then
           if [[ $recurse == 1 ]]; then
-            cat "$TRASH_DIR/record" |\
-              grep ":::`pwd`" |\
+            grep ":::`pwd`" "$TRASH_DIR/record" |\
               awk -F ":::" '{print $1}' |\
               fzfCmd
           else
-            cat "$TRASH_DIR/record" |\
-              grep ":::`pwd`[a-zA-Z0-9]*$" |\
+              grep ":::`pwd`[a-zA-Z0-9]*$" "$TRASH_DIR/record" |\
               awk -F ":::" '{print $1}' |\
               fzfCmd
           fi
@@ -299,8 +296,8 @@ case "$action" in
           echo "Nothing was trashed from here."
         fi
       else
-        cat "$TRASH_DIR/record" |\
-          awk -F ":::" '{print $1}' |\
+        awk -F ":::" '{print $1}' \
+          "$TRASH_DIR/record" |\
           fzfCmd
       fi
     else
