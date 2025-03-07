@@ -349,6 +349,8 @@ case "$action" in
         sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
         echo "$target => $path"
       done
+    else
+      err empty
     fi
   ;;
 esac
