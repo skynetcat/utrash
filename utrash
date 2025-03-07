@@ -81,6 +81,29 @@ checkDir "$TRASH_DIR"
 # =========================================
 # FUNCTIONS
 # =========================================
+
+err () {
+  case "$1" in
+    "date") 
+      message="Nothing was trashed matching date specified."
+      ;;
+
+    "scope") 
+      message="Nothing was trashed from here."
+      ;;
+
+    "action")
+      message="Invalid action."
+      ;;
+
+    *) 
+      message="Unknown error."
+      ;;
+  esac
+
+  echo "$message" 
+}
+
 empty () {
   read -rp "Are you sure you want to delete EVERYTHING in the trash? (y/N) " asked
   if [[ "$asked" == "y" ]]; then
@@ -113,46 +136,48 @@ fzfCmd () {
     --header="[tab:toggleUp, S-tab:toggleDown, C-a:toggleAll]"
 }
 
-restore () {
-  if [[ -n "$1" ]]; then
-    cmd="find $TRASHCAN/$1 -maxdepth 1"
-  else
-    cmd="find $TRASHCAN/ -maxdepth 2"
-  fi
-
-  choice="`$cmd |\
-    sed "/.trash$/d; /[0-9]\{2\}-[0-9]\{2\}-[0-9]\{4\}$/d; /logfile$/d; s|$TRASHCAN/||g" |\
-    fzf --tac`"
-
-  if [[ -z "$choice" ]]; then
-    exit
-  fi
-
-  time="`echo "$choice" |\
-    awk -F '/' '{print $1}'`"
-
-  targetname="`echo "$choice" |\
-    awk -F '/' '{print $2}'`"
-
-  line="`grep --no-ignore-case \
-    "$targetname;;;" "$TRASHCAN/$time/logfile"`"
-
-  original_path="`echo "$line" |\
-    awk -F ';;;' '{print $2}'`"
-
-  mv "$TRASHCAN/$choice" "$original_path"
-
-  sed -i "s|$targetname;;;$original_path||g; /^$/d" "$TRASHCAN/$time/logfile"
-
-  echo "Moved '$targetname' back to '$original_path'"
-}
+# To be checked
+#restore () {
+#  if [[ -n "$1" ]]; then
+#    cmd="find $TRASHCAN/$1 -maxdepth 1"
+#  else
+#    cmd="find $TRASHCAN/ -maxdepth 2"
+#  fi
+#
+#  choice="`$cmd |\
+#    sed "/.trash$/d; /[0-9]\{2\}-[0-9]\{2\}-[0-9]\{4\}$/d; /logfile$/d; s|$TRASHCAN/||g" |\
+#    fzf --tac`"
+#
+#  if [[ -z "$choice" ]]; then
+#    exit
+#  fi
+#
+#  time="`echo "$choice" |\
+#    awk -F '/' '{print $1}'`"
+#
+#  targetname="`echo "$choice" |\
+#    awk -F '/' '{print $2}'`"
+#
+#  line="`grep --no-ignore-case \
+#    "$targetname;;;" "$TRASHCAN/$time/logfile"`"
+#
+#  original_path="`echo "$line" |\
+#    awk -F ';;;' '{print $2}'`"
+#
+#  mv "$TRASHCAN/$choice" "$original_path"
+#
+#  sed -i "s|$targetname;;;$original_path||g; /^$/d" "$TRASHCAN/$time/logfile"
+#
+#  echo "Moved '$targetname' back to '$original_path'"
+#}
 
 # =========================================
 # PROCESS ARGUMENTS
 # =========================================
 
 # Check if help option is the last and print help page then exit.
-if [[ "${@: -1}" == "-h" ]] || [[ "${@: -1}" == "--help" ]]; then
+if [[ "${@: -1}" == "-h" ]] ||\
+   [[ "${@: -1}" == "--help" ]]; then
   printHelp
   exit
 fi
@@ -162,24 +187,24 @@ case "$1" in
     printHelp
     exit
     ;;
-"-e"|"--empty")
-  empty
-  exit
-  ;;
 
-"-r"|"--restore") 
-  action="restore" 
-  ;;
+  "-e"|"--empty")
+    empty
+    exit
+    ;;
 
-"-l"|"--list") 
-  action="list" 
-  ;;
+  "-r"|"--restore") 
+    action="restore" 
+    ;;
 
--*)
-  echo "ERR: Invalid action"
-  printHelp
-  exit
-  ;;
+  "-l"|"--list") 
+    action="list" 
+    ;;
+
+  -*)
+    err action
+    exit
+    ;;
 
 *)
   if [[ "$#" -gt "0" ]]; then
@@ -205,6 +230,9 @@ esac
 
 shift
 
+# Using binary notation for the check
+actionCheck=0
+
 while [[ $# > 0 ]]; do
   case "$1" in
     "-h"|"--help")
@@ -213,33 +241,38 @@ while [[ $# > 0 ]]; do
       ;;
 
     "-d"|"--here") 
-      scope="`pwd`"
-      recurse=1
+      scope=":::`pwd`"
+      actionCheck=$((actionCheck+1))
       shift
       ;;
 
     "-D"|"--here-only")
-      scope="`pwd`"
+      scope=":::`pwd`[a-zA-Z0-9]*$"
+      actionCheck=$((actionCheck+1))
       shift
       ;;
 
     "-t"|"--today") 
-      date="`date "+%d-%m-%Y"`"
+      date="^`date "+%d-%m-%Y"`/"
+      actionCheck=$((actionCheck+2))
       shift
       ;;
 
     "-p"|"--yesterday")
-      date="`date -d "-1 day" "+%d-%m-%Y"`"
+      date="^`date -d "-1 day" "+%d-%m-%Y"`/"
+      actionCheck=$((actionCheck+2))
       shift
       ;;
     
     "-m"|"--month")
-      date="`date "+..-%m-%Y"`"
+      date="^`date "+..-%m-%Y"`/"
+      actionCheck=$((actionCheck+2))
       shift
       ;;
 
     "-y"|"--year")
-      date="`date "+..-..-%Y"`"
+      date="^`date "+..-..-%Y"`/"
+      actionCheck=$((actionCheck+2))
       shift
       ;;
 
@@ -250,29 +283,45 @@ while [[ $# > 0 ]]; do
   esac
 done
 
+if [[ -n "$date" ]]; then
+  checkDate="`grep "$date" "$TRASH_DIR/record"`"
+fi
+
+if [[ -n "$scope" ]]; then
+  checkScope="`grep "$scope" "$TRASH_DIR/record"`"
+fi
+
 case "$action" in
   "list")
     if [[ -f "$TRASH_DIR/record" ]]; then
-      if [[ -n "$date" ]] && [[ -n "$scope" ]]; then
-        if grep -q "^$date/" "$TRASH_DIR/record"; then
-          if grep -q ":::`pwd`" "$TRASH_DIR/record"; then
-            if [[ $recurse == 1 ]]; then
-              grep "^$date/" "$TRASH_DIR/record" |\
-                grep ":::`pwd`" |\
-                awk -F ":::" '{print $1}' |\
-                fzfCmd
+
+      case "$actionCheck" in
+        3)
+          if [[ -n "$checkDate" ]]; then
+            if [[ -n "$checkScope" ]]; then
+                echo "$checkDate" |\
+                  grep "$scope" |\
+                  awk -F ":::" '{print $1}' |\
+                  fzfCmd
             else
-              grep "^$date/" "$TRASH_DIR/record" |\
-                grep ":::`pwd`/[a-zA-Z0-9]*$" |\
-                awk -F ":::" '{print $1}' |\
-                fzfCmd
+              err scope
             fi
           else
-            echo "Nothing was trashed from here."
+            err date
           fi
-        else
-          echo "Nothing was trashed matching date specified."
-        fi
+          ;;
+
+        2)
+          ;;
+
+        1) echo 1
+          ;;
+
+        0) echo 0
+          ;;
+      esac
+
+      if [[ -n "$date" ]] && [[ -n "$scope" ]]; then
       elif [[ -n "$date" ]] && [[ -z "$scope" ]]; then
         if grep -q "^$date/" "$TRASH_DIR/record"; then
           grep "^$date/" "$TRASH_DIR/record" |\
