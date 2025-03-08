@@ -56,6 +56,10 @@ printHelp () {
       Use a custom restore directory instead of
       original directory.
 
+    -fc, --from-custom
+      Use actions on another directory instead of
+      the current directory.
+
   Examples:
     1. utrash hello
         Trashes 'hello' file.
@@ -240,8 +244,15 @@ case "$1" in
 
   *)
     if [[ "$#" -gt "0" ]]; then
+      targets=($@)
+    else
+      echo "No items specified. Using fzf..."
+      targets=($(fzfCmd))
+    fi
+
+    if [[ -n "$targets" ]]; then
       checkDir "$TRASH_DIR/$today"
-      for target in "${@}"; do
+      for target in "${targets[@]}"; do
         if [[ -f "$target" ]] ||\
            [[ -d "$target" ]]; then
            targetName="`basename "$target"`"
@@ -251,10 +262,9 @@ case "$1" in
            echo "Trashed '$targetName'"
          else
            echo "Could not trash '$target' no such file or directory."
+           exit
         fi
       done
-    else
-      echo "Please, specify an item to trash."
     fi
     exit
     ;;
