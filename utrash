@@ -26,6 +26,25 @@ source "$config"
 # =========================================
 # HELP
 # =========================================
+actionHelp () {
+  cat <<HELPPAGE
+    -h, --help
+      Print this help page.
+
+    -e, --empty
+      Empty the trash.
+    
+    -x, --erase
+      Erase items from trash using fzf.
+
+    -l, --list
+      List trashed items.
+
+    -r, --restore
+      Restore item(s) to their original path.
+HELPPAGE
+}
+
 printHelp () {
   cat <<HELPPAGE
   Description:
@@ -34,20 +53,10 @@ printHelp () {
   Usage: utrash [ACTION] [SCOPE] [DATE] [EXTRA]
          utrash [FILE(S)]
 
-  Action:
-    -h, --help
-      Print this help page.
+  Actions:
+`actionHelp`
 
-    -e, --empty
-      Empty the trash.
-
-    -l, --list
-      List trashed items.
-
-    -r, --restore
-      Restore item(s) to their original path.
-
-  Scope:
+  Scopes:
     -d, --here
       Operate on this directory recursively.
 
@@ -89,23 +98,6 @@ printHelp () {
 
     4. utrash -r 
         Select item(s) to recover using fzf.
-HELPPAGE
-}
-
-actionHelp () {
-  cat <<HELPPAGE
-  Available actions:
-    -h, --help
-      Print this help page.
-
-    -e, --empty
-      Empty the trash.
-
-    -l, --list
-      List trashed items.
-
-    -r, --restore
-      Restore item(s) to their original path.
 HELPPAGE
 }
 
@@ -154,8 +146,8 @@ err () {
 }
 
 empty () {
-  read -rp "Are you sure you want to delete EVERYTHING in the trash? (y/N) " asked
-  if [[ "$asked" =~ ^(y|Y|yes|Yes)$ ]]; then
+  read -rp "Are you sure you want to delete EVERYTHING in the trash? (y/N) " emptyAnswer
+  if [[ "$emptyAnswer" =~ ^(y|Y|yes|Yes)$ ]]; then
     rm -rf "$TRASH_DIR"/*
     echo "Trash cleaned"
   else
@@ -224,7 +216,6 @@ list(){
   fi
 }
 
-
 # =========================================
 # PROCESS ARGUMENTS
 # =========================================
@@ -246,6 +237,10 @@ case "$1" in
     empty
     exit
     ;;
+  
+  "-x"|"--erase") 
+    action="erase" 
+    ;;
 
   "-r"|"--restore") 
     action="restore" 
@@ -257,7 +252,7 @@ case "$1" in
 
   -*)
     err action
-    echo ""
+    echo -e "\n  Available actions:"
     actionHelp
     exit
     ;;
@@ -367,23 +362,46 @@ case "$action" in
       "$scope"
     ;;
 
-  "restore")
+  "erase"|"restore")
     fileList="`list "$actionCheck" \
       "$checkDate" \
       "$checkScope" \
       "$scope"`"
 
+    if [[ -z "$fileList" ]]; then
+      exit
+    fi
+
     checkError="`echo "$fileList" | grep "/"`"
 
     if [[ -n "$checkError" ]]; then
-    echo "$fileList" |\
-      while IFS= read -r target ; do 
-        path="`grep "$target" "$TRASH_DIR/record"|\
-          awk -F ":::" '{print $2}'`"
-        mv "$TRASH_DIR/$target" "$path"
-        sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
-        echo "$target => $path"
-      done
+      if [[ "$action" == "restore" ]]; then
+        echo "$fileList" |\
+          while IFS= read -r target ; do 
+            path="`grep "$target" "$TRASH_DIR/record"|\
+              awk -F ":::" '{print $2}'`"
+            mv "$TRASH_DIR/$target" "$path"
+            sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
+            echo "$target => $path"
+          done
+      elif [[ "$action" == "erase" ]]; then
+        echo "$fileList\n"
+        read -rp "Are you ABSOLUTELY sure you want to erase these files? (y/N) " eraseAnswer
+        echo ""
+        if [[ "$eraseAnswer" =~ (y|Y|yes|Yes) ]]; then
+          echo "$fileList" |\
+            while IFS= read -r target ; do 
+              path="`grep "$target" "$TRASH_DIR/record"|\
+                awk -F ":::" '{print $2}'`"
+              rm -rf "$TRASH_DIR/$target"
+              sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
+              echo "Erased $target"
+            done
+        else
+          echo "Aborted"
+          exit
+        fi 
+      fi
     else
       err empty
     fi
