@@ -312,6 +312,11 @@ while [[ $# > 0 ]]; do
       read -rp "Custom directory: " customDir
       shift
       ;;
+    
+    "-fc"|"--from-custom")
+      read -rp "Custom directory: " fromCustomDir
+      shift
+      ;;
   esac
 done
 
