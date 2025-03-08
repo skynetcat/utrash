@@ -92,6 +92,23 @@ printHelp () {
 HELPPAGE
 }
 
+actionHelp () {
+  cat <<HELPPAGE
+  Available actions:
+    -h, --help
+      Print this help page.
+
+    -e, --empty
+      Empty the trash.
+
+    -l, --list
+      List trashed items.
+
+    -r, --restore
+      Restore item(s) to their original path.
+HELPPAGE
+}
+
 
 # =========================================
 # DIRECTORIES
@@ -240,6 +257,8 @@ case "$1" in
 
   -*)
     err action
+    echo ""
+    actionHelp
     exit
     ;;
 
