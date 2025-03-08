@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# This is where files are trashed.
+TRASH_DIR="$HOME/.local/share/utrash"
+
+# The custom fzf command used in the script.
+fzfCmd () {
+  fzfBindings=(
+    "tab:toggle+up"
+    "shift-tab:toggle+down"
+    "ctrl-a:toggle-all"
+  )
+
+  allFzfBinds="`echo "${fzfBindings[@]@Q}" |\
+    sed "s/^'//g; s/'$//g; s/' '/,/g"`"
+
+  fzf -m \
+    --tac \
+    --bind="$allFzfBinds" \
+    --header="[tab:toggleUp, S-tab:toggleDown, C-a:toggleAll]"
+}

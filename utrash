@@ -5,7 +5,23 @@
 # VARIABLES
 # =========================================
 today="`date "+%d-%m-%Y"`"
-TRASH_DIR="$HOME/.local/share/utrash"
+CONFIG_DIR="$HOME/.config/utrash"
+
+# Check if config file is not in its directory
+# and is in the current directory instead.
+if [[ -f "$CONFIG_DIR/config" ]]; then
+  config="$CONFIG_DIR/config"
+elif [[ -f "${0/%utrash/config}" ]]; then
+  config="${0/%utrash/config}"
+elif [[ -f "./config" ]]; then
+  config="./config"
+else
+  echo "No config file found."
+  exit
+fi
+
+# Source the configuration file
+source "$config"
 
 # =========================================
 # HELP
@@ -87,6 +103,7 @@ checkDir () {
 }
 
 checkDir "$TRASH_DIR"
+checkDir "$CONFIG_DIR"
 
 
 # =========================================
@@ -133,22 +150,6 @@ absolutePath () {
   targetName="$1"
   dirName="`dirname "$2"`"
   echo "`cd "$dirName"; pwd`/$targetName"
-}
-
-fzfCmd () {
-  fzfBindings=(
-    "tab:toggle+up"
-    "shift-tab:toggle+down"
-    "ctrl-a:toggle-all"
-  )
-
-  allFzfBinds="`echo "${fzfBindings[@]@Q}" |\
-    sed "s/^'//g; s/'$//g; s/' '/,/g"`"
-
-  fzf -m \
-    --tac \
-    --bind="$allFzfBinds" \
-    --header="[tab:toggleUp, S-tab:toggleDown, C-a:toggleAll]"
 }
 
 list(){
