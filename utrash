@@ -31,7 +31,7 @@ colorize () {
     *) echo "Error: Unknown color" ;;
   esac
 
-  echo -e "\001\033[${output}${color}m\002${@:3}${resetSeq}"
+  echo -e "\x01\033[${output}${color}m\x02${@:3}${resetSeq}"
 }
 
 
@@ -321,7 +321,7 @@ case "$1" in
            path="`absolutePath "$targetName" "$target"`"
            echo "$today/$targetName:::$path" >> $TRASH_DIR/record
            mv "$path" "$TRASH_DIR/$today"
-           echo "Trashed '$targetName'"
+           echo "`colorize fg red "Trashed:"` $targetName"
          else
            err notarget "$target"
            exit
@@ -434,7 +434,7 @@ case "$action" in
               awk -F ":::" '{print $2}'`"
             mv "$TRASH_DIR/$target" "$path"
             sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
-            echo "$target => $path"
+            echo "`colorize fg green $target` => $path"
           done
       elif [[ "$action" == "erase" ]]; then
         echo "$fileList\n"
