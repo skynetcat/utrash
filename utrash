@@ -196,7 +196,7 @@ empty () {
   read -rp "Are you sure you want to delete EVERYTHING in the trash? (y/N) " emptyAnswer
   if [[ "$emptyAnswer" =~ ^(y|Y|yes|Yes)$ ]]; then
     rm -rf "$TRASH_DIR"/*
-    echo "Trash cleaned"
+    echo -e "\n`colorize fg purple "Trash cleaned"`"
   else
     echo "Nothing was deleted"
   fi
@@ -437,7 +437,7 @@ case "$action" in
             echo "`colorize fg green $target` => $path"
           done
       elif [[ "$action" == "erase" ]]; then
-        echo "$fileList\n"
+        echo -e "$fileList\n"
         read -rp "Are you ABSOLUTELY sure you want to erase these files? (y/N) " eraseAnswer
         echo ""
         if [[ "$eraseAnswer" =~ (y|Y|yes|Yes) ]]; then
@@ -447,7 +447,7 @@ case "$action" in
                 awk -F ":::" '{print $2}'`"
               rm -rf "$TRASH_DIR/$target"
               sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
-              echo "Erased $target"
+              echo "` colorize fg purple "Erased:"` $target"
             done
         else
           echo "Aborted"
