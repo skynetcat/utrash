@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# Config directory
+CONFIG_DIR="$HOME/.config/utrash"
+
+# Make sure the directory exists
+checkDir () {
+  if [[ ! -d "$1" ]]; then
+    mkdir -p "$1"
+  fi
+}
+
+checkDir "$CONFIG_DIR"
+
+# Add config file to config directory
+cp config "$CONFIG_DIR/"
+
+# Install the script
+chmod +x ./utrash
+cp utrash $PREFIX/bin/
