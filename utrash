@@ -321,7 +321,7 @@ case "$1" in
            path="`absolutePath "$targetName" "$target"`"
            echo "$today/$targetName:::$path" >> $TRASH_DIR/record
            mv "$path" "$TRASH_DIR/$today"
-           echo "`colorize fg red "Trashed:"` $targetName"
+           echo "`colorize fg cyan "Trashed:"` $targetName"
          else
            err notarget "$target"
            exit
