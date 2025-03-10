@@ -1,34 +1,6 @@
 #!/usr/bin/env bash
 
 # =========================================
-# ERROR MESSAGES
-# =========================================
-
-
-# =========================================
-# VARIABLES
-# =========================================
-today="`date "+%d-%m-%Y"`"
-CONFIG_DIR="$HOME/.config/utrash"
-
-# Check if config file is not in its directory
-# and is in the current directory instead.
-if [[ -f "$CONFIG_DIR/config" ]]; then
-  config="$CONFIG_DIR/config"
-elif [[ -f "${0/%utrash/config}" ]]; then
-  config="${0/%utrash/config}"
-elif [[ -f "./config" ]]; then
-  config="./config"
-else
-  echo "No config file found."
-  exit
-fi
-
-# Source the configuration file
-source "$config"
-
-
-# =========================================
 # COLORS
 # =========================================
 
@@ -43,7 +15,7 @@ colorize () {
       ;;
     bg) output="4"
       ;;
-    *) echo "Unknown color output"
+    *) echo "Error: Unknown color output"
       ;;
   esac
   
@@ -56,11 +28,71 @@ colorize () {
     purple)     color=5 ;;
     cyan)       color=6 ;;
     white)      color=7 ;;
-    *) echo "Unknown color"
+    *) echo "Error: Unknown color" ;;
   esac
 
   echo -e "\001\033[${output}${color}m\002${@:3}${resetSeq}"
 }
+
+
+# =========================================
+# ERROR MESSAGES
+# =========================================
+err () {
+  case "$1" in
+    "date") 
+      message="Nothing was trashed matching date specified."
+      ;;
+
+    "scope") 
+      message="Nothing was trashed from here."
+      ;;
+
+    "action")
+      message="Invalid action."
+      ;;
+
+    "empty")
+      message="There is nothing in the trash."
+      ;;
+
+    "config")
+      message="No config file was found."
+      ;;
+
+    "notarget")
+      message="Could not trash '$2' no such file or directory."
+      ;;
+
+    *) 
+      message="Unknown error."
+      ;;
+  esac
+
+  echo "`colorize fg red "Error:"` $message" 
+}
+
+
+# =========================================
+# VARIABLES
+# =========================================
+today="`date "+%d-%m-%Y"`"
+CONFIG_DIR="$HOME/.config/utrash"
+
+# Check where the config file is.
+if [[ -f "$CONFIG_DIR/config" ]]; then
+  config="$CONFIG_DIR/config"
+elif [[ -f "${0/%utrash/config}" ]]; then
+  config="${0/%utrash/config}"
+elif [[ -f "./config" ]]; then
+  config="./config"
+else
+  err config
+  exit
+fi
+
+# Source the config file
+source "$config"
 
 
 # =========================================
@@ -143,8 +175,9 @@ HELPPAGE
 
 
 # =========================================
-# DIRECTORIES
+# CHECK DIRECTORIES
 # =========================================
+# if a directory does not exist, create it.
 checkDir () {
   if [[ ! -d "$1" ]]; then
     mkdir -p "$1"
@@ -158,32 +191,6 @@ checkDir "$CONFIG_DIR"
 # =========================================
 # FUNCTIONS
 # =========================================
-
-err () {
-  case "$1" in
-    "date") 
-      message="Nothing was trashed matching date specified."
-      ;;
-
-    "scope") 
-      message="Nothing was trashed from here."
-      ;;
-
-    "action")
-      message="Invalid action."
-      ;;
-
-    "empty")
-      message="There is nothing in the trash."
-      ;;
-
-    *) 
-      message="Unknown error."
-      ;;
-  esac
-
-  echo "`colorize fg red "Error: $message"`" 
-}
 
 empty () {
   read -rp "Are you sure you want to delete EVERYTHING in the trash? (y/N) " emptyAnswer
@@ -202,14 +209,14 @@ absolutePath () {
 }
 
 list(){
-  actionCheck="$1"
+  sdCheck="$1"
   checkDate="$2"
   checkScope="$3"
   scope="$4"
 
   if [[ -f "$TRASH_DIR/record" ]] &&\
      [[ -s "$TRASH_DIR/record" ]]; then
-    case "$actionCheck" in
+    case "$sdCheck" in
       3)
         if [[ -n "$checkDate" ]]; then
           if [[ -n "$checkScope" ]]; then
@@ -316,7 +323,7 @@ case "$1" in
            mv "$path" "$TRASH_DIR/$today"
            echo "Trashed '$targetName'"
          else
-           echo "Could not trash '$target' no such file or directory."
+           err notarget "$target"
            exit
         fi
       done
@@ -327,8 +334,13 @@ esac
 
 shift
 
-# Using binary for the check
-actionCheck=0
+# Using binary for checking values of scope and
+# date:
+#   00     => no scope or date.
+#   01     => date.
+#   10 (2) => scope.
+#   11 (3) => both scope and date.
+sdCheck=0
 
 while [[ $# > 0 ]]; do
   case "$1" in
@@ -339,37 +351,37 @@ while [[ $# > 0 ]]; do
 
     "-d"|"--here") 
       scope=":::`pwd`"
-      actionCheck=$((actionCheck+1))
+      sdCheck=$((sdCheck+1))
       shift
       ;;
 
     "-D"|"--here-only")
       scope=":::`pwd`[a-zA-Z0-9]*$"
-      actionCheck=$((actionCheck+1))
+      sdCheck=$((sdCheck+1))
       shift
       ;;
 
     "-t"|"--today") 
       date="^`date "+%d-%m-%Y"`/"
-      actionCheck=$((actionCheck+2))
+      sdCheck=$((sdCheck+2))
       shift
       ;;
 
     "-p"|"--yesterday")
       date="^`date -d "-1 day" "+%d-%m-%Y"`/"
-      actionCheck=$((actionCheck+2))
+      sdCheck=$((sdCheck+2))
       shift
       ;;
     
     "-m"|"--month")
       date="^`date "+..-%m-%Y"`/"
-      actionCheck=$((actionCheck+2))
+      sdCheck=$((sdCheck+2))
       shift
       ;;
 
     "-y"|"--year")
       date="^`date "+..-..-%Y"`/"
-      actionCheck=$((actionCheck+2))
+      sdCheck=$((sdCheck+2))
       shift
       ;;
 
@@ -396,14 +408,14 @@ fi
 
 case "$action" in
   "list")
-    list "$actionCheck" \
+    list "$sdCheck" \
       "$checkDate" \
       "$checkScope" \
       "$scope"
     ;;
 
   "erase"|"restore")
-    fileList="`list "$actionCheck" \
+    fileList="`list "$sdCheck" \
       "$checkDate" \
       "$checkScope" \
       "$scope"`"
