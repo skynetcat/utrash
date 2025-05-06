@@ -2,11 +2,13 @@
 
 # Config directory
 CONFIG_DIR="$HOME/.config/utrash"
+INSTALL_DIR="$HOME/.local/bin/"
 
 # Make sure the directory exists
 checkDir () {
   if [[ ! -d "$1" ]]; then
     mkdir -p "$1"
+    echo "Created '$1'"
   fi
 }
 
@@ -14,7 +16,9 @@ checkDir "$CONFIG_DIR"
 
 # Add config file to config directory
 cp config "$CONFIG_DIR/"
+echo "Copied config to $CONFIG_DIR"
 
 # Install the script
 chmod +x ./utrash
-cp utrash $PREFIX/bin/
+cp utrash "$INSTALL_DIR"
+echo "Copied utrash to $INSTALL_DIR"

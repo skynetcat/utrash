@@ -52,10 +52,6 @@ err () {
       message="Invalid action."
       ;;
 
-    "empty")
-      message="There is nothing in the trash."
-      ;;
-
     "config")
       message="No config file was found."
       ;;
@@ -192,6 +188,20 @@ checkDir "$CONFIG_DIR"
 # FUNCTIONS
 # =========================================
 
+move () {
+  # Get last item in path
+  target="${1/*\//}"
+
+  if [[ -e "$2/$target" ]]; then
+    read -rp "Do you want to replace '$2/$target' ?(y/N) " moveAnswer
+    if [[ "$moveAnswer" =~ ^(y|Y|yes|Yes)$ ]]; then
+      mv "$1" "$2"
+    else
+      echo "Nothing was moved."
+    fi
+  fi
+}
+
 empty () {
   read -rp "Are you sure you want to delete EVERYTHING in the trash? (y/N) " emptyAnswer
   if [[ "$emptyAnswer" =~ ^(y|Y|yes|Yes)$ ]]; then
@@ -222,7 +232,7 @@ list(){
           if [[ -n "$checkScope" ]]; then
             echo "$checkDate" |\
               grep "$scope" |\
-              awk -F ":::" '{print $1}' |\
+              awk -F ":::" '{print $3}' |\
               fzfCmd
           else
             err scope
@@ -235,7 +245,7 @@ list(){
       2)
         if [[ -n "$checkDate" ]]; then
           echo "$checkDate" |\
-            awk -F ":::" '{print $1}' |\
+            awk -F ":::" '{print $3}' |\
             fzfCmd
         else
           err date
@@ -245,7 +255,7 @@ list(){
       1)
         if [[ -n "$checkScope" ]]; then
           echo "$checkScope" |\
-            awk -F ":::" '{print $1}' |\
+            awk -F ":::" '{print $3}' |\
             fzfCmd
         else
           err scope
@@ -253,13 +263,13 @@ list(){
         ;;
 
       0)
-        awk -F ":::" '{print $1}' \
+        awk -F ":::" '{print $3}' \
           "$TRASH_DIR/record" |\
           fzfCmd
         ;;
       esac
   else
-    err empty
+    echo "`colorize fg cyan "Trash is empty."`"
   fi
 }
 
@@ -306,7 +316,7 @@ case "$1" in
 
   *)
     if [[ "$#" -gt "0" ]]; then
-      targets=($@)
+      targets=("$@")
     else
       echo "No items specified. Using fzf..."
       targets=($(fzfCmd))
@@ -319,7 +329,10 @@ case "$1" in
            [[ -d "$target" ]]; then
            targetName="`basename "$target"`"
            path="`absolutePath "$targetName" "$target"`"
-           echo "$today/$targetName:::$path" >> $TRASH_DIR/record
+           rawSize="`stat --printf="%s" "$path"`"
+           size="`echo "$rawSize" |\
+             numfmt --to=iec --suffix=B --format="%9.2f"`"
+           echo "$rawSize:::$size:::$today/$targetName:::$path" >> $TRASH_DIR/record
            mv "$path" "$TRASH_DIR/$today"
            echo "`colorize fg cyan "Trashed:"` $targetName"
          else
@@ -431,7 +444,7 @@ case "$action" in
         echo "$fileList" |\
           while IFS= read -r target ; do 
             path="`grep "$target" "$TRASH_DIR/record"|\
-              awk -F ":::" '{print $2}'`"
+              awk -F ":::" '{print $4}'`"
             mv "$TRASH_DIR/$target" "$path"
             sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
             echo "`colorize fg green $target` => $path"
@@ -444,7 +457,7 @@ case "$action" in
           echo "$fileList" |\
             while IFS= read -r target ; do 
               path="`grep "$target" "$TRASH_DIR/record"|\
-                awk -F ":::" '{print $2}'`"
+                awk -F ":::" '{print $4}'`"
               rm -rf "$TRASH_DIR/$target"
               sed -i "s|$target:::$path||g; /^$/d" "$TRASH_DIR/record"
               echo "` colorize fg purple "Erased:"` $target"
@@ -455,7 +468,7 @@ case "$action" in
         fi 
       fi
     else
-      err empty
+      echo "`colorize fg cyan "Trash is empty."`"
     fi
   ;;
 esac
